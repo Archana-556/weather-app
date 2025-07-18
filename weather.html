@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather App - Archana Anand</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: background 1s ease;
+    }
+
+    .floating-icon {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      pointer-events: none;
+      opacity: 0.3;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      animation: float 20s linear infinite;
+    }
+    .floating-icon:hover {
+      transform: translateX(40px) scale(1.4);
+      opacity: 0.6;
+    }
+
+    @keyframes float {
+      from { transform: translateY(100vh); }
+      to   { transform: translateY(-120px); }
+    }
+
+    .weather-text {
+      z-index: 2;
+      text-align: center;
+      color: #222;
+      text-shadow: 1px 1px 3px #fff;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .input-box {
+      z-index: 2;
+    }
+
+    input {
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body id="appBody" class="default">
+  <!-- Floating Icons -->
+  <div id="bgIcons"></div>
+
+  <!-- Input -->
+  <div class="container text-center input-box mb-4">
+    <h2 class="fw-bold text-dark">🌦 Weather App</h2>
+    <small class="d-block mb-3">Made by Archana Anand</small>
+    <div class="d-flex justify-content-center flex-wrap">
+      <input type="text" id="cityInput" class="form-control w-50 me-2" placeholder="Enter city name" />
+      <button class="btn btn-primary mt-2 mt-sm-0" onclick="getWeatherByCity()">Search</button>
+    </div>
+  </div>
+
+  <!-- Weather Output -->
+  <div class="weather-text d-none" id="weatherText">
+    <h1 id="cityName"></h1>
+    <img id="icon" width="100" class="mb-3" />
+    <h4><span id="temp"></span>°C | <span id="wind"></span> km/h</h4>
+    <h5><span id="description"></span></h5>
+  </div>
+
+  <script>
+    const apiKey = "d4b0d5b015ebbeb9db3b53a60504c28a";
+
+    window.onload = function () {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          getWeatherByCoords(lat, lon);
+        });
+      }
+    };
+
+    function getWeatherByCity() {
+      const city = document.getElementById("cityInput").value.trim();
+      if (!city) {
+        alert("Please enter a city name");
+        return;
+      }
+
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`)
+        .then(res => {
+          if (!res.ok) throw new Error("City not found");
+          return res.json();
+        })
+        .then(data => {
+          const { lat, lon } = data.coord;
+          getWeatherByCoords(lat, lon, city);
+        })
+        .catch(() => alert("City not found"));
+    }
+
+    function getWeatherByCoords(lat, lon, customCity = "") {
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`)
+        .then(res => res.json())
+        .then(data => {
+          const temp = data.main.temp;
+          const wind = data.wind.speed;
+          const weather = data.weather[0];
+          const description = weather.main;
+          const iconURL = `https://openweathermap.org/img/wn/${weather.icon}@2x.png`;
+          const cityName = customCity || data.name;
+
+          document.getElementById("cityName").textContent = cityName;
+          document.getElementById("temp").textContent = temp;
+          document.getElementById("wind").textContent = wind;
+          document.getElementById("description").textContent = description;
+          document.getElementById("icon").src = iconURL;
+
+          document.getElementById("weatherText").classList.remove("d-none");
+
+          setAppBackground(description);
+        });
+    }
+
+    function setAppBackground(description) {
+      const body = document.getElementById("appBody");
+      body.className = "default";
+      const iconArea = document.getElementById("bgIcons");
+      iconArea.innerHTML = "";
+
+      const classMap = {
+        Clear: { class: "clear", icon: "☀️", background: "#87CEEB" },
+        Clouds: { class: "cloudy", icon: "☁️", background: "#87CEEB" },
+        Rain: { class: "rainy", icon: "🌧️", background: "#87CEEB" },
+        Drizzle: { class: "rainy", icon: "🌦️", background: "#87CEEB" },
+        Thunderstorm: { class: "rainy", icon: "⛈️", background: "#87CEEB" },
+        Snow: { class: "snowy", icon: "❄️", background: "#87CEEB" },
+        Mist: { class: "misty", icon: "🌫️", background: "#87CEEB" },
+      };
+
+      const config = classMap[description] || { class: "default", icon: "🌡️" };
+      body.classList.add(config.class);
+
+      // add floating icons
+      for (let i = 0; i < 30; i++) {
+        const el = document.createElement("div");
+        el.className = "floating-icon";
+        el.textContent = config.icon;
+        el.style.left = Math.random() * 100 + "%";
+        el.style.animationDuration = (10 + Math.random() * 20) + "s";
+        iconArea.appendChild(el);
+      }
+    }
+  </script>
+</body>
+</html>
